@@ -13,6 +13,57 @@ function pngSize(buffer: Buffer): { width: number; height: number } {
   };
 }
 
+async function inspectExportedMessage(
+  page: Page,
+  buffer: Buffer,
+  scale: number,
+): Promise<{ titleInk: number; gapInk: number; messageInk: number }> {
+  return page.evaluate(
+    async ({ dataUrl, exportScale }) => {
+      const image = new Image();
+      image.src = dataUrl;
+      await image.decode();
+
+      const canvas = document.createElement('canvas');
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Canvas context is unavailable.');
+      context.drawImage(image, 0, 0);
+
+      const countInk = (top: number, bottom: number) => {
+        const { data } = context.getImageData(
+          Math.round(250 * exportScale),
+          Math.round(top * exportScale),
+          Math.round(580 * exportScale),
+          Math.round((bottom - top) * exportScale),
+        );
+        let count = 0;
+        for (let index = 0; index < data.length; index += 4) {
+          if (
+            data[index] < 200 &&
+            data[index + 1] < 160 &&
+            data[index + 2] < 190
+          ) {
+            count += 1;
+          }
+        }
+        return count;
+      };
+
+      return {
+        titleInk: countInk(716, 738),
+        gapInk: countInk(744, 753),
+        messageInk: countInk(758, 776),
+      };
+    },
+    {
+      dataUrl: `data:image/png;base64,${buffer.toString('base64')}`,
+      exportScale: scale,
+    },
+  );
+}
+
 async function uploadPortrait(page: Page, name = 'portrait.png'): Promise<void> {
   await page.locator('#photo-upload').setInputFiles({
     name,
@@ -202,6 +253,93 @@ test('limits text and keeps the measured message above the countdown', async ({
   await expect(page.locator('#message-error')).toContainText(
     'Keep your message to 150 characters or fewer.',
   );
+});
+
+test('keeps the message title on one line for short and long messages', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  const label = page.locator('.flyer__message-label');
+  const messageText = page.locator('.flyer__message-text');
+
+  const expectSingleLineTitle = async () => {
+    const metrics = await label.evaluate((node) => {
+      const area = node.parentElement;
+      if (!area) throw new Error('Message area is unavailable.');
+      const style = getComputedStyle(node);
+      return {
+        width: node.clientWidth,
+        areaWidth: area.clientWidth,
+        height: node.clientHeight,
+        scrollHeight: node.scrollHeight,
+        fontSize: style.fontSize,
+        fontWeight: style.fontWeight,
+        lineHeight: style.lineHeight,
+        textAlign: style.textAlign,
+        whiteSpace: style.whiteSpace,
+      };
+    });
+
+    expect(metrics).toMatchObject({
+      width: 952,
+      areaWidth: 952,
+      height: 30,
+      fontSize: '28px',
+      fontWeight: '800',
+      lineHeight: '30px',
+      textAlign: 'center',
+      whiteSpace: 'nowrap',
+    });
+    expect(metrics.scrollHeight).toBeLessThan(metrics.height * 2);
+
+    const labelBox = await label.boundingBox();
+    const messageBox = await messageText.boundingBox();
+    expect(labelBox).not.toBeNull();
+    expect(messageBox).not.toBeNull();
+    expect((labelBox?.y ?? 0) + (labelBox?.height ?? 0)).toBeLessThanOrEqual(
+      messageBox?.y ?? 0,
+    );
+  };
+
+  await expectSingleLineTitle();
+
+  await page.getByLabel('Your Message').fill('W'.repeat(150));
+  await expect
+    .poll(async () => Number(await messageText.getAttribute('data-lines')))
+    .toBeGreaterThanOrEqual(3);
+  await expectSingleLineTitle();
+});
+
+test('exports a one-line message title at every scale', async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+
+  await page.goto('/');
+  await fillValidNameAndPhoto(page);
+
+  const downloadButton = page.getByRole('button', { name: /Download My Flyer/i });
+
+  for (const scale of [1, 2, 3] as const) {
+    await page.getByText(`${scale}×`, { exact: true }).click();
+
+    const downloadPromise = page.waitForEvent('download');
+    await downloadButton.click();
+    const download = await downloadPromise;
+    const downloadPath = await download.path();
+    expect(downloadPath).not.toBeNull();
+
+    const buffer = await readFile(downloadPath as string);
+    expect(buffer.subarray(1, 4).toString()).toBe('PNG');
+    expect(pngSize(buffer)).toEqual({ width: 1080 * scale, height: 1350 * scale });
+
+    const inspection = await inspectExportedMessage(page, buffer, scale);
+    expect(inspection.titleInk).toBeGreaterThan(0);
+    expect(inspection.gapInk).toBe(0);
+    expect(inspection.messageInk).toBeGreaterThan(0);
+  }
+
+  expect(pageErrors).toEqual([]);
 });
 
 test('downloads a valid PNG at the selected scale', async ({ page }) => {
