@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type JSX } from 'react';
+import { UI_COPY } from './data/copy';
 import { DEFAULT_CONTENT } from './data/defaults';
-import { THEMES } from './data/themes';
 import type {
   ExportScale,
   Feedback,
@@ -9,9 +9,11 @@ import type {
 } from './types';
 import { buildPngFilename } from './lib/filename';
 import { createFlyerPng, downloadBlob } from './lib/exportImage';
+import { validateFirstName, validateMessage, validateStatusLine } from './lib/text';
 import { Flyer } from './components/Flyer';
 import { FlyerPreview } from './components/FlyerPreview';
 import { EditorPanel } from './components/EditorPanel';
+import { ExportPanel } from './components/ExportPanel';
 import { FlyerLogo } from './components/FlyerLogo';
 import {
   AlertIcon,
@@ -29,6 +31,24 @@ export default function App(): JSX.Element {
   const [resetKey, setResetKey] = useState(0);
   const flyerRef = useRef<HTMLElement>(null);
   const feedbackTimer = useRef<number | null>(null);
+
+  const nameValidation = validateFirstName(content.firstName);
+  const statusValidation = validateStatusLine(content.statusLine);
+  const messageValidation = validateMessage(content.message);
+  const canExport =
+    !nameValidation && !statusValidation && !messageValidation && photo !== null;
+  const filename = nameValidation ? null : buildPngFilename(content.firstName);
+
+  let readinessMessage: string = UI_COPY.export.ready;
+  if (nameValidation && !photo) {
+    readinessMessage = UI_COPY.export.missingBoth;
+  } else if (nameValidation) {
+    readinessMessage = UI_COPY.export.missingName;
+  } else if (!photo) {
+    readinessMessage = UI_COPY.export.missingPhoto;
+  } else if (statusValidation || messageValidation) {
+    readinessMessage = UI_COPY.export.invalidFields;
+  }
 
   const notify = (nextFeedback: Feedback) => {
     if (feedbackTimer.current !== null) {
@@ -58,15 +78,33 @@ export default function App(): JSX.Element {
   };
 
   const handleExport = async () => {
-    if (!content.firstName.trim()) {
-      notify({ kind: 'error', message: 'Add your first name before downloading.' });
+    if (nameValidation) {
+      notify({ kind: 'error', message: nameValidation });
       document.getElementById('firstName')?.focus();
+      return;
+    }
+
+    if (statusValidation) {
+      notify({ kind: 'error', message: statusValidation });
+      document.getElementById('statusLine')?.focus();
+      return;
+    }
+
+    if (messageValidation) {
+      notify({ kind: 'error', message: messageValidation });
+      document.getElementById('message')?.focus();
+      return;
+    }
+
+    if (!photo) {
+      notify({ kind: 'error', message: UI_COPY.photo.errors.required });
+      document.getElementById('photo-upload-trigger')?.focus();
       return;
     }
 
     const node = flyerRef.current;
     if (!node) {
-      notify({ kind: 'error', message: 'The flyer is not ready yet. Please try again.' });
+      notify({ kind: 'error', message: UI_COPY.export.notReady });
       return;
     }
 
@@ -76,15 +114,13 @@ export default function App(): JSX.Element {
       downloadBlob(blob, buildPngFilename(content.firstName));
       notify({
         kind: 'success',
-        message: `Your flyer is ready — ${width} × ${height}px PNG downloaded.`,
+        message: UI_COPY.export.success(width, height),
       });
     } catch (error) {
       notify({
         kind: 'error',
         message:
-          error instanceof Error
-            ? error.message
-            : 'Something went wrong while creating your flyer. Please try again.',
+          error instanceof Error ? error.message : UI_COPY.export.genericError,
       });
     } finally {
       setExporting(false);
@@ -92,9 +128,7 @@ export default function App(): JSX.Element {
   };
 
   const handleReset = () => {
-    const confirmed = window.confirm(
-      'Start over? This will clear your photo and reset every field.',
-    );
+    const confirmed = window.confirm(UI_COPY.export.resetConfirm);
     if (!confirmed) return;
 
     setContent({ ...DEFAULT_CONTENT });
@@ -108,7 +142,7 @@ export default function App(): JSX.Element {
   return (
     <div className="app-shell">
       <a className="skip-link" href="#editor">
-        Skip to the editor
+        {UI_COPY.skipLink}
       </a>
 
       <header className="site-header">
@@ -117,35 +151,47 @@ export default function App(): JSX.Element {
             <FlyerLogo decorative />
           </span>
           <span className="brand__copy">
-            <span className="brand__family">Chorale La Fraternité</span>
-            <span className="brand__name">
-              Frat Day <em>Flyer Studio</em>
-            </span>
+            <span className="brand__family">{UI_COPY.brand.family}</span>
+            <h1 className="brand__name">
+              {UI_COPY.brand.name} <em>{UI_COPY.brand.accent}</em>
+            </h1>
+            <span className="brand__tagline">{UI_COPY.brand.tagline}</span>
           </span>
         </div>
         <div className="site-header__actions">
           <span className="privacy-pill">
             <LockIcon />
-            On-device editing
+            {UI_COPY.header.privacy}
           </span>
           <a className="button button--small button--outline" href="#editor">
-            Customize
+            {UI_COPY.header.action}
           </a>
         </div>
       </header>
 
       <main className="app-main">
+        <section className="form-column" aria-label="Create your invitation">
+          <EditorPanel
+            key={resetKey}
+            content={content}
+            photo={photo}
+            onChange={updateContent}
+            onPhotoChange={setPhoto}
+            onPhotoError={(message) => notify({ kind: 'error', message })}
+          />
+        </section>
+
         <section className="preview-column" aria-labelledby="preview-title">
           <div className="preview-heading">
             <span className="eyebrow">
               <SparkleIcon />
-              Live preview
+              {UI_COPY.preview.eyebrow}
             </span>
             <div className="preview-heading__row">
-              <h1 id="preview-title">Your flyer</h1>
+              <h2 id="preview-title">{UI_COPY.preview.title}</h2>
               <span className="live-badge">
                 <i aria-hidden="true" />
-                Updates as you type
+                {UI_COPY.preview.badge}
               </span>
             </div>
           </div>
@@ -153,38 +199,37 @@ export default function App(): JSX.Element {
           <div className="preview-frame">
             <div className="preview-frame__mat">
               <FlyerPreview>
-                <Flyer ref={flyerRef} content={content} photo={photo} theme={THEMES[content.themeId]} />
+                <Flyer ref={flyerRef} content={content} photo={photo} />
               </FlyerPreview>
             </div>
           </div>
 
           <p className="preview-caption">
             <LockIcon />
-            Your photo never leaves this device. Export in crisp 2× resolution for
-            WhatsApp, stories and print.
+            {UI_COPY.preview.caption}
           </p>
         </section>
 
-        <EditorPanel
-          content={content}
-          photo={photo}
-          scale={scale}
-          exporting={exporting}
-          resetKey={resetKey}
-          onChange={updateContent}
-          onPhotoChange={setPhoto}
-          onPhotoError={(message) => notify({ kind: 'error', message })}
-          onScaleChange={setScale}
-          onExport={() => void handleExport()}
-          onReset={handleReset}
-        />
+        <section className="action-column" aria-label="Download your flyer">
+          <ExportPanel
+            filename={filename}
+            canExport={canExport}
+            readinessMessage={readinessMessage}
+            scale={scale}
+            exporting={exporting}
+            onScaleChange={setScale}
+            onExport={() => void handleExport()}
+            onReset={handleReset}
+          />
+        </section>
       </main>
 
       <footer className="site-footer">
         <span>
-          Made for the <strong>Chorale La Fraternité</strong> family.
+          {UI_COPY.footer.madeFor} <strong>{UI_COPY.footer.family}</strong>{' '}
+          family.
         </span>
-        <span>Twongere duhure.</span>
+        <span>{UI_COPY.footer.signoff}</span>
       </footer>
 
       {feedback ? (
@@ -206,7 +251,7 @@ export default function App(): JSX.Element {
           <button
             className="toast__close"
             type="button"
-            aria-label="Dismiss notification"
+            aria-label={UI_COPY.toast.dismiss}
             onClick={() => setFeedback(null)}
           >
             ×
