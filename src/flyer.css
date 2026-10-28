@@ -301,8 +301,9 @@
   flex-direction: column;
   align-items: center;
   width: 952px;
-  height: 88px;
+  height: auto;
   text-align: center;
+  transform: translateY(var(--message-shift, 0px));
 }
 
 .flyer__message-label {
@@ -316,21 +317,16 @@
   text-transform: uppercase;
 }
 
-.fit-message {
-  align-items: center;
+.flyer__message-text {
   width: 880px;
-  height: 31px;
-  margin-top: 9px;
-  color: var(--flyer-muted);
-}
-
-.fit-message .fit-text__inner {
+  margin: 9px 0 0;
   color: var(--flyer-muted);
   font-family: 'Montserrat', sans-serif;
   font-size: 20px;
   font-weight: 500;
   letter-spacing: 0.002em;
   line-height: 30px;
+  overflow-wrap: anywhere;
   text-align: center;
 }
 

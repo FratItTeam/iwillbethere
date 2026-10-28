@@ -1,43 +1,49 @@
 import { forwardRef, type CSSProperties, type JSX } from 'react';
-import type { FlyerContent, PhotoSelection, Theme } from '../types';
+import { FIXED_FLYER_CONTENT, OFFICIAL_EVENT } from '../data/defaults';
+import { CLASSIC_PALETTE } from '../data/flyerPalette';
 import {
   getCountdownLabel,
   getEventDateDisplay,
   getEventWeekdayDisplay,
 } from '../lib/dates';
-import { personalizeHeading } from '../lib/content';
+import { buildHeadline, getDisplayName } from '../lib/content';
+import { useKigaliNow } from '../hooks/useKigaliNow';
+import type { FlyerContent, PhotoSelection } from '../types';
 import { FitText } from './FitText';
 import { FlyerLogo } from './FlyerLogo';
+import { MessageBlock } from './MessageBlock';
 import { PhotoPlaceholder } from './PhotoPlaceholder';
 import { MusicNote, RingOrnament, Sparkle } from './Decorations';
 
 interface FlyerProps {
   content: FlyerContent;
   photo: PhotoSelection | null;
-  theme: Theme;
   now?: Date;
   id?: string;
 }
 
 export const Flyer = forwardRef<HTMLElement, FlyerProps>(function Flyer(
-  { content, photo, theme, now, id = 'flyer' },
+  { content, photo, now, id = 'flyer' },
   ref,
 ): JSX.Element {
-  const heading = personalizeHeading(content.headingTemplate, content.firstName);
-  const countdownLabel = getCountdownLabel(content.eventDate, now);
+  const liveNow = useKigaliNow();
+  const currentNow = now ?? liveNow;
+  const displayName = getDisplayName(content.firstName);
+  const heading = buildHeadline(content.firstName, content.headlineEmoji);
+  const countdownLabel = getCountdownLabel(OFFICIAL_EVENT.date, currentNow);
   const photoStyle = photo
     ? ({ objectPosition: `${photo.positionX}% ${photo.positionY}%` } as CSSProperties)
     : undefined;
 
-  const themeStyle = {
-    '--flyer-ink': theme.ink,
-    '--flyer-accent': theme.accent,
-    '--flyer-soft': theme.soft,
-    '--flyer-muted': theme.muted,
-    '--flyer-rule': theme.rule,
-    '--flyer-ring': theme.ring,
-    '--flyer-logo': theme.logo,
-    '--flyer-ornament': theme.ornament,
+  const paletteStyle = {
+    '--flyer-ink': CLASSIC_PALETTE.ink,
+    '--flyer-accent': CLASSIC_PALETTE.accent,
+    '--flyer-soft': CLASSIC_PALETTE.soft,
+    '--flyer-muted': CLASSIC_PALETTE.muted,
+    '--flyer-rule': CLASSIC_PALETTE.rule,
+    '--flyer-ring': CLASSIC_PALETTE.ring,
+    '--flyer-logo': CLASSIC_PALETTE.logo,
+    '--flyer-ornament': CLASSIC_PALETTE.ornament,
   } as CSSProperties;
 
   return (
@@ -45,13 +51,13 @@ export const Flyer = forwardRef<HTMLElement, FlyerProps>(function Flyer(
       id={id}
       ref={ref}
       className="flyer"
-      style={themeStyle}
+      style={paletteStyle}
       aria-label="Your Frat Day flyer"
     >
       <header className="flyer__header">
         <FitText
           className="fit-header"
-          text={content.header}
+          text={FIXED_FLYER_CONTENT.header}
           maxFontSize={22}
           minFontSize={10}
           nowrap
@@ -59,14 +65,14 @@ export const Flyer = forwardRef<HTMLElement, FlyerProps>(function Flyer(
         <FitText
           as="h1"
           className="fit-event-title"
-          text={content.eventTitle}
+          text={FIXED_FLYER_CONTENT.eventTitle}
           maxFontSize={78}
           minFontSize={40}
           nowrap
         />
         <FitText
           className="fit-subtitle"
-          text={content.subtitle}
+          text={FIXED_FLYER_CONTENT.subtitle}
           maxFontSize={28}
           minFontSize={14}
           nowrap
@@ -85,7 +91,7 @@ export const Flyer = forwardRef<HTMLElement, FlyerProps>(function Flyer(
             <img
               className="flyer__photo"
               src={photo.dataUrl}
-              alt={content.firstName ? `${content.firstName}'s portrait` : 'Your portrait'}
+              alt={`${displayName}'s portrait`}
               style={photoStyle}
               draggable={false}
             />
@@ -115,7 +121,7 @@ export const Flyer = forwardRef<HTMLElement, FlyerProps>(function Flyer(
         <div className="flyer__tagline-pill">
           <FitText
             className="fit-tagline"
-            text={content.tagline}
+            text={FIXED_FLYER_CONTENT.tagline}
             maxFontSize={15.2}
             minFontSize={8}
             nowrap
@@ -123,15 +129,11 @@ export const Flyer = forwardRef<HTMLElement, FlyerProps>(function Flyer(
         </div>
       </section>
 
-      <div className="flyer__message-area">
-        <div className="flyer__message-label">MY MESSAGE:</div>
-        <FitText
-          className="fit-message"
-          text={content.message || 'Add a short message for your friends.'}
-          maxFontSize={20}
-          minFontSize={10}
-        />
-      </div>
+      <MessageBlock
+        label={FIXED_FLYER_CONTENT.messageLabel}
+        message={content.message}
+        placeholder={FIXED_FLYER_CONTENT.messagePlaceholder}
+      />
 
       <div className="flyer__countdown-wrap" aria-label={`Countdown: ${countdownLabel}`}>
         <Sparkle className="flyer__countdown-sparkle" />
@@ -149,14 +151,14 @@ export const Flyer = forwardRef<HTMLElement, FlyerProps>(function Flyer(
         <div className="flyer__date-block">
           <FitText
             className="fit-weekday"
-            text={getEventWeekdayDisplay(content.eventDate)}
+            text={getEventWeekdayDisplay(OFFICIAL_EVENT.date)}
             maxFontSize={16}
             minFontSize={7}
             nowrap
           />
           <FitText
             className="fit-date"
-            text={getEventDateDisplay(content.eventDate)}
+            text={getEventDateDisplay(OFFICIAL_EVENT.date)}
             maxFontSize={43}
             minFontSize={18}
             nowrap
@@ -169,14 +171,14 @@ export const Flyer = forwardRef<HTMLElement, FlyerProps>(function Flyer(
         <div className="flyer__panel-right">
           <FitText
             className="fit-arrival"
-            text={`Arrival Time: ${content.arrivalTime || 'TBA'}`}
+            text={`Arrival Time: ${OFFICIAL_EVENT.arrivalTime}`}
             maxFontSize={34.9}
             minFontSize={14}
             nowrap
           />
           <FitText
             className="fit-venue"
-            text={content.venue || 'VENUE TO BE ANNOUNCED'}
+            text={OFFICIAL_EVENT.venue}
             maxFontSize={26.5}
             minFontSize={11}
           />
@@ -189,7 +191,7 @@ export const Flyer = forwardRef<HTMLElement, FlyerProps>(function Flyer(
           <FitText
             as="p"
             className="fit-quote"
-            text={content.quote}
+            text={FIXED_FLYER_CONTENT.quote}
             maxFontSize={22.7}
             minFontSize={12}
             nowrap
@@ -199,7 +201,7 @@ export const Flyer = forwardRef<HTMLElement, FlyerProps>(function Flyer(
 
         <FitText
           className="fit-organizers"
-          text={content.organizers}
+          text={FIXED_FLYER_CONTENT.organizers}
           maxFontSize={21.5}
           minFontSize={8}
         />
