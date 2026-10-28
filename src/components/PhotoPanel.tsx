@@ -1,45 +1,43 @@
 import {
-  useEffect,
   useRef,
   useState,
   type DragEvent,
   type JSX,
 } from 'react';
-import type { PhotoSelection } from '../types';
+import { UI_COPY } from '../data/copy';
 import { loadPhoto, validatePhotoFile } from '../lib/photo';
+import type { PhotoSelection } from '../types';
 import { CameraIcon, LockIcon, RefreshIcon } from './UiIcons';
 
 interface PhotoPanelProps {
   photo: PhotoSelection | null;
   onChange: (photo: PhotoSelection | null) => void;
   onError: (message: string) => void;
-  resetKey: number;
 }
 
 export function PhotoPanel({
   photo,
   onChange,
   onError,
-  resetKey,
 }: PhotoPanelProps): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
-
-  useEffect(() => {
-    if (inputRef.current) inputRef.current.value = '';
-  }, [resetKey]);
+  const [error, setError] = useState<string | null>(null);
+  const { photo: copy } = UI_COPY;
 
   const handleFile = async (file: File | undefined) => {
     if (!file || busy) return;
 
     const validationError = validatePhotoFile(file);
     if (validationError) {
+      setError(validationError);
       onError(validationError);
       return;
     }
 
     setBusy(true);
+    setError(null);
     try {
       const loaded = await loadPhoto(file);
       onChange({
@@ -48,8 +46,11 @@ export function PhotoPanel({
         positionX: 50,
         positionY: 50,
       });
-    } catch (error) {
-      onError(error instanceof Error ? error.message : 'That photo could not be added.');
+    } catch (caught) {
+      const message =
+        caught instanceof Error ? caught.message : copy.errors.generic;
+      setError(message);
+      onError(message);
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = '';
@@ -74,6 +75,8 @@ export function PhotoPanel({
         id="photo-upload"
         className="sr-only"
         type="file"
+        tabIndex={-1}
+        aria-hidden="true"
         accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
         onChange={(event) => void handleFile(event.target.files?.[0])}
       />
@@ -83,7 +86,7 @@ export function PhotoPanel({
           <div className="photo-current">
             <img className="photo-current__thumb" src={photo.dataUrl} alt="" />
             <div className="photo-current__copy">
-              <span className="photo-current__eyebrow">Photo ready</span>
+              <span className="photo-current__eyebrow">{copy.ready}</span>
               <span className="photo-current__name" title={photo.name}>
                 {photo.name}
               </span>
@@ -93,38 +96,42 @@ export function PhotoPanel({
             </div>
             <div className="photo-current__actions">
               <button
+                id="photo-upload-trigger"
                 className="button button--small button--quiet"
                 type="button"
                 onClick={() => inputRef.current?.click()}
                 disabled={busy}
               >
                 <RefreshIcon />
-                Replace
+                {copy.replace}
               </button>
               <button
                 className="button button--small button--text"
                 type="button"
-                onClick={() => onChange(null)}
+                onClick={() => {
+                  setError(null);
+                  onChange(null);
+                }}
               >
-                Remove
+                {copy.remove}
               </button>
             </div>
           </div>
 
           <div className="crop-controls">
             <div className="crop-controls__heading">
-              <span>Adjust the crop</span>
+              <span>{copy.cropTitle}</span>
               <button
                 className="crop-controls__reset"
                 type="button"
                 onClick={() => onChange({ ...photo, positionX: 50, positionY: 50 })}
               >
-                Center
+                {copy.center}
               </button>
             </div>
             <label className="range-field">
               <span>
-                Horizontal <b>{photo.positionX}%</b>
+                {copy.horizontal} <b>{photo.positionX}%</b>
               </span>
               <input
                 type="range"
@@ -138,7 +145,7 @@ export function PhotoPanel({
             </label>
             <label className="range-field">
               <span>
-                Vertical <b>{photo.positionY}%</b>
+                {copy.vertical} <b>{photo.positionY}%</b>
               </span>
               <input
                 type="range"
@@ -170,21 +177,28 @@ export function PhotoPanel({
           </div>
           <div className="photo-drop__copy">
             <button
+              id="photo-upload-trigger"
               className="button button--outline"
               type="button"
               onClick={() => inputRef.current?.click()}
               disabled={busy}
             >
-              {busy ? 'Opening photo…' : 'Choose a photo'}
+              {busy ? copy.opening : copy.choose}
             </button>
-            <p>or drop it here · JPG, PNG or WebP · up to 10 MB</p>
+            <p>{copy.dropHint}</p>
           </div>
         </div>
       )}
 
+      {error ? (
+        <p className="photo-panel__error" role="alert">
+          {error}
+        </p>
+      ) : null}
+
       <p className="privacy-note">
         <LockIcon />
-        Your photo is processed right here in your browser and never uploaded.
+        {copy.privacy}
       </p>
     </div>
   );
