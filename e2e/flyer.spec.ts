@@ -132,13 +132,16 @@ test('keeps official details locked and refreshes the Kigali countdown', async (
 
   await expect(
     page.locator(
-      '#eventDate, #arrivalTime, #venue, #headingTemplate, input[name="theme"]',
+      '#eventDate, #arrivalTime, #venue, #headingTemplate, #statusLine, input[name="statusLine"], input[name="theme"]',
     ),
   ).toHaveCount(0);
   await expect(page.getByText('Flyer wording', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Color story', { exact: true })).toHaveCount(0);
 
   const flyer = page.locator('.flyer');
+  await expect(flyer.locator('.fit-status .fit-text__inner')).toHaveText(
+    'Definitely not Missing This!!!!',
+  );
   await expect(flyer.locator('.fit-weekday .fit-text__inner')).toHaveText(
     'SATURDAY / KU WA GATANDATU',
   );
@@ -198,15 +201,6 @@ test('limits text and keeps the measured message above the countdown', async ({
   await expect(message).toHaveValue('A'.repeat(150));
   await expect(page.locator('#message-error')).toContainText(
     'Keep your message to 150 characters or fewer.',
-  );
-
-  const status = page.getByLabel('Your Status');
-  await status.fill('S'.repeat(50));
-  await expect(page.locator('#statusLine-counter')).toHaveText('50 / 50');
-  await status.press('T');
-  await expect(status).toHaveValue('S'.repeat(50));
-  await expect(page.locator('#statusLine-error')).toContainText(
-    'Keep your status to 50 characters or fewer.',
   );
 });
 
@@ -314,7 +308,10 @@ test('starts over without retaining personal content', async ({ page }) => {
     'I, First Name, will be There!',
   );
   await expect(page.locator('#message')).toHaveValue(
-    "I miss you! Can't wait to see you!",
+    "Ready for the day! Can't wait to see you all!",
+  );
+  await expect(page.locator('.fit-status .fit-text__inner')).toHaveText(
+    'Definitely not Missing This!!!!',
   );
   await expect(page.getByRole('button', { name: /Download My Flyer/i })).toBeDisabled();
   await expect(page.getByRole('button', { name: /Download My Flyer/i })).toHaveCount(1);

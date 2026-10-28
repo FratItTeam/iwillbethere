@@ -5,7 +5,6 @@ import {
   splitGraphemes,
   validateFirstName,
   validateMessage,
-  validateStatusLine,
 } from '../src/lib/text';
 
 describe('grapheme helpers', () => {
@@ -59,14 +58,7 @@ describe('validateFirstName', () => {
   });
 });
 
-describe('field length validation', () => {
-  it('allows fifty status characters and rejects fifty-one', () => {
-    expect(validateStatusLine('A'.repeat(50))).toBeNull();
-    expect(validateStatusLine('A'.repeat(51))).toBe(
-      'Keep your status to 50 characters or fewer.',
-    );
-  });
-
+describe('message length validation', () => {
   it('allows one hundred fifty message characters and rejects more', () => {
     expect(validateMessage('A'.repeat(150))).toBeNull();
     expect(validateMessage('A'.repeat(151))).toBe(
