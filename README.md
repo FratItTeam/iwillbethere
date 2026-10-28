@@ -1,18 +1,19 @@
 # Frat Day Flyer Studio
 
-A browser-only flyer maker for the Chorale La Fraternité **Frat Day** reunion.
-Personalize the artwork, add a portrait, see every change live, and download a
-print-ready PNG.
+A browser-only invitation maker for the Chorale La Fraternité **Frat Day**
+reunion. Add your name and photo, see every change live, and download a
+print-ready PNG to share with friends.
 
 ![Frat Day flyer reference](reference/frat-day-reference.png)
 
 ## What it does
 
 - Live 1080 × 1350 flyer preview that updates as you type.
-- First-name personalization in the headline and download filename.
-- Optional photo upload with drag-and-drop, validation and crop controls.
-- Automatic countdown and English/Kinyarwanda weekday from the event date.
-- Three color stories: Classic, Midnight and Evergreen.
+- Required first name (10 characters maximum, one emoji maximum) and photo.
+- Optional headline emoji inserted before the final exclamation mark.
+- Required photo upload with drag-and-drop, validation, replace/remove and crop controls.
+- Locked official event details and an automatic countdown in the Africa/Kigali time zone.
+- Classic burgundy-and-pink flyer palette.
 - PNG export at 1× (1080 × 1350), 2× (2160 × 2700) or 3× (3240 × 4050).
 - Fully client-side: photos and text never leave the browser.
 
@@ -60,14 +61,15 @@ else, set `VITE_BASE_PATH` (for example `/my-folder/`) when building.
 
 ## Customizing
 
-- Default copy, organizer names and field limits live in `src/data/defaults.ts`.
-- Palettes live in `src/data/themes.ts`.
+- Page copy, validation messages and headline emoji options live in `src/data/copy.ts`.
+- Fixed flyer copy, official event details and field limits live in `src/data/defaults.ts`.
+- The Classic flyer palette lives in `src/data/flyerPalette.ts`.
 - Flyer geometry and typography live in `src/flyer.css`.
 - The flyer logo is an inline SVG in `src/assets/flyer-logo.svg`.
 - The original artwork and measurements are in `reference/`.
 
-The headline supports `[First Name]` as a placeholder. Empty optional fields
-(quote and organizers) are simply omitted from the flyer.
+The headline is locked to `I, [First Name], will be There!`. Official event
+details are fixed for Frat Day 2026.
 
 ## Photo rules
 
@@ -95,8 +97,9 @@ point Playwright at it:
 PLAYWRIGHT_EXECUTABLE_PATH=/usr/bin/google-chrome npm run test:e2e
 ```
 
-The e2e suite starts its own dev server on port 5173 and verifies live editing,
-theme and size changes, photo upload, PNG dimensions, validation and reset.
+The e2e suite starts its own dev server on port 5173 and verifies required
+fields, name limits, headline emoji, locked details, Kigali countdown behavior,
+message layout, responsive order, PNG dimensions and reset.
 
 ## Troubleshooting
 
@@ -114,8 +117,9 @@ theme and size changes, photo upload, PNG dimensions, validation and reset.
 ```text
 src/
   components/       Flyer, editor, photo panel and controls
-  data/             Default copy and color themes
-  lib/              Countdown, filename, photo and content helpers
+  data/             Copy, defaults and the Classic palette
+  hooks/            Kigali countdown refresh hook
+  lib/              Countdown, filename, photo, text and layout helpers
   flyer.css         Print/flyer layout
   styles.css        App shell and editor styling
 e2e/                Playwright flows
