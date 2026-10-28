@@ -81,12 +81,10 @@ export function EditorPanel({
   onPhotoError,
 }: EditorPanelProps): JSX.Element {
   const [nameError, setNameError] = useState<string | null>(null);
-  const [statusError, setStatusError] = useState<string | null>(null);
   const [messageError, setMessageError] = useState<string | null>(null);
   const { fields, photo: photoCopy, sections, intro, validation } = UI_COPY;
   const headline = buildHeadline(content.firstName, content.headlineEmoji);
   const nameLength = countGraphemes(content.firstName.trim());
-  const statusLength = countGraphemes(content.statusLine);
   const messageLength = countGraphemes(content.message);
 
   const handleNameChange = (value: string) => {
@@ -109,16 +107,6 @@ export function EditorPanel({
     setNameError(validateFirstName(trimmed));
   };
 
-  const handleStatusChange = (value: string) => {
-    if (countGraphemes(value) > FIELD_LIMITS.statusLine) {
-      setStatusError(validation.statusTooLong);
-      return;
-    }
-
-    setStatusError(null);
-    onChange('statusLine', value);
-  };
-
   const handleMessageChange = (value: string) => {
     if (countGraphemes(value) > FIELD_LIMITS.message) {
       setMessageError(validation.messageTooLong);
@@ -133,13 +121,6 @@ export function EditorPanel({
     'firstName-hint',
     'firstName-counter',
     nameError ? 'firstName-error' : null,
-  ]
-    .filter(Boolean)
-    .join(' ');
-  const statusDescriptionIds = [
-    'statusLine-hint',
-    'statusLine-counter',
-    statusError ? 'statusLine-error' : null,
   ]
     .filter(Boolean)
     .join(' ');
@@ -204,25 +185,6 @@ export function EditorPanel({
               onChange={(emoji) => onChange('headlineEmoji', emoji)}
             />
           </div>
-        </Field>
-
-        <Field
-          label={fields.statusLine.label}
-          htmlFor="statusLine"
-          hint={fields.statusLine.helper}
-          error={statusError}
-          counter={`${statusLength} / ${FIELD_LIMITS.statusLine}`}
-        >
-          <input
-            id="statusLine"
-            name="statusLine"
-            className="input"
-            type="text"
-            value={content.statusLine}
-            aria-invalid={Boolean(statusError)}
-            aria-describedby={statusDescriptionIds}
-            onChange={(event) => handleStatusChange(event.target.value)}
-          />
         </Field>
 
         <Field

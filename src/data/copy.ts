@@ -58,11 +58,6 @@ export const UI_COPY = {
       pickerHelp: 'Choose one emoji to add before the final exclamation mark.',
       pickerNone: 'No emoji',
     },
-    statusLine: {
-      label: 'Your Status',
-      helper: 'Set the mood in 50 characters or fewer.',
-      counterLabel: 'characters used',
-    },
     message: {
       label: 'Your Message',
       helper: 'Keep it short, warm and under 150 characters.',
@@ -121,7 +116,6 @@ export const UI_COPY = {
     namePlaceholder: 'Replace “First Name” with your own name.',
     nameTooLong: 'Use 10 characters or fewer.',
     nameTooManyEmoji: 'Use only one emoji in your name.',
-    statusTooLong: 'Keep your status to 50 characters or fewer.',
     messageTooLong: 'Keep your message to 150 characters or fewer.',
   },
   footer: {

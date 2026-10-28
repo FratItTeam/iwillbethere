@@ -104,7 +104,7 @@ export const Flyer = forwardRef<HTMLElement, FlyerProps>(function Flyer(
       <section className="flyer__right" aria-label="Your personalized message">
         <FitText
           className="fit-status"
-          text={content.statusLine}
+          text={FIXED_FLYER_CONTENT.statusLine}
           maxFontSize={16}
           minFontSize={9}
           nowrap

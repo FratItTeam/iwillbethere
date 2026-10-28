@@ -1,7 +1,6 @@
 export interface FlyerContent {
   firstName: string;
   headlineEmoji: string;
-  statusLine: string;
   message: string;
 }
 

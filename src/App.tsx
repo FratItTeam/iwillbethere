@@ -9,7 +9,7 @@ import type {
 } from './types';
 import { buildPngFilename } from './lib/filename';
 import { createFlyerPng, downloadBlob } from './lib/exportImage';
-import { validateFirstName, validateMessage, validateStatusLine } from './lib/text';
+import { validateFirstName, validateMessage } from './lib/text';
 import { Flyer } from './components/Flyer';
 import { FlyerPreview } from './components/FlyerPreview';
 import { EditorPanel } from './components/EditorPanel';
@@ -33,10 +33,8 @@ export default function App(): JSX.Element {
   const feedbackTimer = useRef<number | null>(null);
 
   const nameValidation = validateFirstName(content.firstName);
-  const statusValidation = validateStatusLine(content.statusLine);
   const messageValidation = validateMessage(content.message);
-  const canExport =
-    !nameValidation && !statusValidation && !messageValidation && photo !== null;
+  const canExport = !nameValidation && !messageValidation && photo !== null;
   const filename = nameValidation ? null : buildPngFilename(content.firstName);
 
   let readinessMessage: string = UI_COPY.export.ready;
@@ -46,7 +44,7 @@ export default function App(): JSX.Element {
     readinessMessage = UI_COPY.export.missingName;
   } else if (!photo) {
     readinessMessage = UI_COPY.export.missingPhoto;
-  } else if (statusValidation || messageValidation) {
+  } else if (messageValidation) {
     readinessMessage = UI_COPY.export.invalidFields;
   }
 
@@ -81,12 +79,6 @@ export default function App(): JSX.Element {
     if (nameValidation) {
       notify({ kind: 'error', message: nameValidation });
       document.getElementById('firstName')?.focus();
-      return;
-    }
-
-    if (statusValidation) {
-      notify({ kind: 'error', message: statusValidation });
-      document.getElementById('statusLine')?.focus();
       return;
     }
 

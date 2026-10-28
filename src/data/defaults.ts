@@ -4,6 +4,7 @@ export const FIXED_FLYER_CONTENT = {
   header: 'TWONGERE DUHURE!',
   eventTitle: 'FRAT DAY',
   subtitle: '– MEET & GREET 2026',
+  statusLine: 'Definitely not Missing This!!!!',
   headingTemplate: 'I, [First Name], will be There!',
   messageLabel: 'The Message',
   messagePlaceholder: 'Add a short message for your friends.',
@@ -22,14 +23,12 @@ export const OFFICIAL_EVENT = {
 export const DEFAULT_CONTENT: FlyerContent = {
   firstName: 'First Name',
   headlineEmoji: '',
-  statusLine: 'Not Planning to Miss!!!!',
-  message: "I miss you! Can't wait to see you!",
+  message: "Ready for the day! Can't wait to see you all!",
 };
 
 export const FIELD_LIMITS = {
   firstName: 10,
   firstNameEmoji: 1,
-  statusLine: 50,
   message: 150,
 } as const;
 

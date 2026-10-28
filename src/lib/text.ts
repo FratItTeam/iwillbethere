@@ -63,12 +63,6 @@ export function validateFirstName(value: string): string | null {
   return null;
 }
 
-export function validateStatusLine(value: string): string | null {
-  return countGraphemes(value) > FIELD_LIMITS.statusLine
-    ? UI_COPY.validation.statusTooLong
-    : null;
-}
-
 export function validateMessage(value: string): string | null {
   return countGraphemes(value) > FIELD_LIMITS.message
     ? UI_COPY.validation.messageTooLong
