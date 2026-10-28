@@ -1,26 +1,11 @@
 export interface FlyerContent {
-  header: string;
-  eventTitle: string;
-  subtitle: string;
   firstName: string;
+  headlineEmoji: string;
   statusLine: string;
-  headingTemplate: string;
   message: string;
-  tagline: string;
-  eventDate: string;
-  arrivalTime: string;
-  venue: string;
-  quote: string;
-  organizers: string;
-  themeId: ThemeId;
 }
 
-export type ThemeId = 'classic' | 'midnight' | 'evergreen';
-
-export interface Theme {
-  id: ThemeId;
-  name: string;
-  description: string;
+export interface FlyerPalette {
   ink: string;
   accent: string;
   soft: string;
