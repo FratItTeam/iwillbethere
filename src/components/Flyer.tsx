@@ -90,7 +90,7 @@ export const Flyer = forwardRef<HTMLElement, FlyerProps>(function Flyer(
           {photo ? (
             <img
               className="flyer__photo"
-              src={photo.dataUrl}
+              src={photo.objectUrl}
               alt={`${displayName}'s portrait`}
               style={photoStyle}
               draggable={false}

@@ -1,11 +1,12 @@
 import {
+  useEffect,
   useRef,
   useState,
   type DragEvent,
   type JSX,
 } from 'react';
 import { UI_COPY } from '../data/copy';
-import { loadPhoto, validatePhotoFile } from '../lib/photo';
+import { isAbortError, loadPhoto, validatePhotoFile } from '../lib/photo';
 import type { PhotoSelection } from '../types';
 import { CameraIcon, LockIcon, RefreshIcon } from './UiIcons';
 
@@ -21,13 +22,21 @@ export function PhotoPanel({
   onError,
 }: PhotoPanelProps): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
+  const requestRef = useRef<AbortController | null>(null);
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { photo: copy } = UI_COPY;
 
+  useEffect(
+    () => () => {
+      requestRef.current?.abort();
+    },
+    [],
+  );
+
   const handleFile = async (file: File | undefined) => {
-    if (!file || busy) return;
+    if (!file) return;
 
     const validationError = validatePhotoFile(file);
     if (validationError) {
@@ -36,10 +45,18 @@ export function PhotoPanel({
       return;
     }
 
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+
     setBusy(true);
     setError(null);
     try {
-      const loaded = await loadPhoto(file);
+      const loaded = await loadPhoto(file, { signal: controller.signal });
+      if (controller.signal.aborted || requestRef.current !== controller) {
+        URL.revokeObjectURL(loaded.objectUrl);
+        return;
+      }
       onChange({
         ...loaded,
         name: file.name,
@@ -47,13 +64,23 @@ export function PhotoPanel({
         positionY: 50,
       });
     } catch (caught) {
+      if (
+        controller.signal.aborted ||
+        isAbortError(caught) ||
+        requestRef.current !== controller
+      ) {
+        return;
+      }
       const message =
         caught instanceof Error ? caught.message : copy.errors.generic;
       setError(message);
       onError(message);
     } finally {
-      setBusy(false);
-      if (inputRef.current) inputRef.current.value = '';
+      if (requestRef.current === controller) {
+        requestRef.current = null;
+        setBusy(false);
+        if (inputRef.current) inputRef.current.value = '';
+      }
     }
   };
 
@@ -84,7 +111,7 @@ export function PhotoPanel({
       {photo ? (
         <>
           <div className="photo-current">
-            <img className="photo-current__thumb" src={photo.dataUrl} alt="" />
+            <img className="photo-current__thumb" src={photo.objectUrl} alt="" />
             <div className="photo-current__copy">
               <span className="photo-current__eyebrow">{copy.ready}</span>
               <span className="photo-current__name" title={photo.name}>
@@ -109,6 +136,9 @@ export function PhotoPanel({
                 className="button button--small button--text"
                 type="button"
                 onClick={() => {
+                  requestRef.current?.abort();
+                  requestRef.current = null;
+                  setBusy(false);
                   setError(null);
                   onChange(null);
                 }}

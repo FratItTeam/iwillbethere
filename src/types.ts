@@ -16,7 +16,7 @@ export interface FlyerPalette {
 }
 
 export interface PhotoSelection {
-  dataUrl: string;
+  objectUrl: string;
   name: string;
   width: number;
   height: number;

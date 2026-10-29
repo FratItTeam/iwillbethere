@@ -7,9 +7,26 @@ const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp']);
 type FileLike = Pick<File, 'name' | 'size' | 'type'>;
 
 export interface LoadedPhoto {
-  dataUrl: string;
+  objectUrl: string;
   width: number;
   height: number;
+}
+
+interface LoadPhotoOptions {
+  signal?: AbortSignal;
+}
+
+function createAbortError(): Error {
+  return new DOMException('Photo loading was cancelled.', 'AbortError');
+}
+
+export function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    error.name === 'AbortError'
+  );
 }
 
 export function validatePhotoFile(file: FileLike): string | null {
@@ -29,39 +46,87 @@ export function validatePhotoFile(file: FileLike): string | null {
   return null;
 }
 
-function readFileAsDataUrl(file: File): Promise<string> {
+function decodeImage(
+  objectUrl: string,
+  signal?: AbortSignal,
+): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        resolve(reader.result);
-      } else {
-        reject(new Error(UI_COPY.photo.errors.unreadable));
-      }
-    };
-    reader.onerror = () => reject(new Error(UI_COPY.photo.errors.unreadable));
-    reader.readAsDataURL(file);
-  });
-}
+    if (signal?.aborted) {
+      reject(createAbortError());
+      return;
+    }
 
-function decodeImage(dataUrl: string): Promise<{ width: number; height: number }> {
-  return new Promise((resolve, reject) => {
     const image = new Image();
-    image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
-    image.onerror = () => reject(new Error(UI_COPY.photo.errors.unreadable));
-    image.src = dataUrl;
+    let settled = false;
+
+    const cleanup = () => {
+      signal?.removeEventListener('abort', handleAbort);
+      image.onload = null;
+      image.onerror = null;
+    };
+
+    const finish = (action: () => void) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      action();
+    };
+
+    const handleAbort = () => {
+      image.src = '';
+      finish(() => reject(createAbortError()));
+    };
+
+    image.onload = () => {
+      if (!image.naturalWidth || !image.naturalHeight) {
+        finish(() => reject(new Error(UI_COPY.photo.errors.noDimensions)));
+        return;
+      }
+
+      let decoded: Promise<void>;
+      try {
+        decoded = image.decode();
+      } catch {
+        finish(() => reject(new Error(UI_COPY.photo.errors.unreadable)));
+        return;
+      }
+
+      decoded.then(
+        () =>
+          finish(() =>
+            resolve({
+              width: image.naturalWidth,
+              height: image.naturalHeight,
+            }),
+          ),
+        () => finish(() => reject(new Error(UI_COPY.photo.errors.unreadable))),
+      );
+    };
+
+    image.onerror = () =>
+      finish(() => reject(new Error(UI_COPY.photo.errors.unreadable)));
+
+    signal?.addEventListener('abort', handleAbort, { once: true });
+    image.src = objectUrl;
   });
 }
 
-export async function loadPhoto(file: File): Promise<LoadedPhoto> {
+export async function loadPhoto(
+  file: File,
+  options: LoadPhotoOptions = {},
+): Promise<LoadedPhoto> {
   const validationError = validatePhotoFile(file);
   if (validationError) throw new Error(validationError);
 
-  const dataUrl = await readFileAsDataUrl(file);
-  const dimensions = await decodeImage(dataUrl);
-  if (!dimensions.width || !dimensions.height) {
-    throw new Error(UI_COPY.photo.errors.noDimensions);
-  }
+  if (options.signal?.aborted) throw createAbortError();
 
-  return { dataUrl, ...dimensions };
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const dimensions = await decodeImage(objectUrl, options.signal);
+    if (options.signal?.aborted) throw createAbortError();
+    return { objectUrl, ...dimensions };
+  } catch (error) {
+    URL.revokeObjectURL(objectUrl);
+    throw error;
+  }
 }

@@ -31,6 +31,8 @@ export default function App(): JSX.Element {
   const [resetKey, setResetKey] = useState(0);
   const flyerRef = useRef<HTMLElement>(null);
   const feedbackTimer = useRef<number | null>(null);
+  const photoUrlRef = useRef<string | null>(null);
+  const exportingRef = useRef(false);
 
   const nameValidation = validateFirstName(content.firstName);
   const messageValidation = validateMessage(content.message);
@@ -75,7 +77,18 @@ export default function App(): JSX.Element {
     setContent((current) => ({ ...current, [key]: value }));
   };
 
+  const handlePhotoChange = (nextPhoto: PhotoSelection | null) => {
+    const nextUrl = nextPhoto?.objectUrl ?? null;
+    if (photoUrlRef.current && photoUrlRef.current !== nextUrl) {
+      URL.revokeObjectURL(photoUrlRef.current);
+    }
+    photoUrlRef.current = nextUrl;
+    setPhoto(nextPhoto);
+  };
+
   const handleExport = async () => {
+    if (exportingRef.current) return;
+
     if (nameValidation) {
       notify({ kind: 'error', message: nameValidation });
       document.getElementById('firstName')?.focus();
@@ -100,9 +113,10 @@ export default function App(): JSX.Element {
       return;
     }
 
+    exportingRef.current = true;
     setExporting(true);
     try {
-      const { blob, width, height } = await createFlyerPng(node, scale);
+      const { blob, width, height } = await createFlyerPng(node, scale, photo);
       downloadBlob(blob, buildPngFilename(content.firstName));
       notify({
         kind: 'success',
@@ -115,6 +129,7 @@ export default function App(): JSX.Element {
           error instanceof Error ? error.message : UI_COPY.export.genericError,
       });
     } finally {
+      exportingRef.current = false;
       setExporting(false);
     }
   };
@@ -124,7 +139,7 @@ export default function App(): JSX.Element {
     if (!confirmed) return;
 
     setContent({ ...DEFAULT_CONTENT });
-    setPhoto(null);
+    handlePhotoChange(null);
     setScale(2);
     setResetKey((key) => key + 1);
     setFeedback(null);
@@ -168,7 +183,7 @@ export default function App(): JSX.Element {
             content={content}
             photo={photo}
             onChange={updateContent}
-            onPhotoChange={setPhoto}
+            onPhotoChange={handlePhotoChange}
             onPhotoError={(message) => notify({ kind: 'error', message })}
           />
         </section>

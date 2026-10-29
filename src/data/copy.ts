@@ -110,6 +110,8 @@ export const UI_COPY = {
     notReady: 'The flyer is not ready yet. Please try again.',
     genericError:
       'Something went wrong while creating your flyer. Please try again.',
+    photoError:
+      "We couldn't include your photo in the flyer. Please try again or choose your photo again.",
   },
   validation: {
     nameRequired: 'Add your first name.',

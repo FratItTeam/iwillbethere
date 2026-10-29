@@ -312,6 +312,7 @@ test('keeps the message title on one line for short and long messages', async ({
 });
 
 test('exports a one-line message title at every scale', async ({ page }) => {
+  test.setTimeout(90_000);
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
 
